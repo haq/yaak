@@ -11273,6 +11273,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "yaak-browser"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "yaak-lifecycle",
+ "yaak-models",
+ "yaak-templates",
+]
+
+[[package]]
 name = "yaak-cli"
 version = "0.1.0"
 dependencies = [
@@ -11741,9 +11752,7 @@ dependencies = [
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
- "yaak-lifecycle",
- "yaak-models",
- "yaak-templates",
+ "yaak-browser",
 ]
 
 [[package]]
@@ -11767,6 +11776,7 @@ dependencies = [
  "ts-rs",
  "url",
  "uuid",
+ "yaak-browser",
  "yaak-http",
  "yaak-models",
 ]

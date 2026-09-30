@@ -25,10 +25,7 @@ crate-type = ["cdylib", "rlib"]
 log = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
-yaak-lifecycle = { workspace = true }
-yaak-models = { workspace = true }
-# No default features: the template exports belong to @yaakapp-internal/templates, not this module
-yaak-templates = { path = "../yaak-templates", default-features = false }
+yaak-browser = { workspace = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 console_error_panic_hook = "0.1"

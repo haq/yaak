@@ -3,7 +3,7 @@
 use clap::Parser;
 use log::info;
 use std::net::SocketAddr;
-use yaak_web::{Config, router};
+use yaak_web::{Config, try_router};
 
 #[tokio::main]
 async fn main() {
@@ -17,7 +17,10 @@ async fn main() {
         std::process::exit(1);
     });
     let rate_limit_per_minute = config.rate_limit_per_minute;
-    let app = router(config);
+    let app = try_router(config).unwrap_or_else(|e| {
+        eprintln!("{e}");
+        std::process::exit(1);
+    });
 
     let listener = tokio::net::TcpListener::bind(bind).await.unwrap_or_else(|e| {
         eprintln!("Failed to bind {bind}: {e}");

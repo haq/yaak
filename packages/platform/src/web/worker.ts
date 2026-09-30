@@ -5,8 +5,8 @@
  *
  * On the desktop that is the Rust binary: it holds SQLite, every window talks
  * to it, and it pushes model writes to all of them. In a browser this worker
- * plays that part. It loads the model layer compiled to wasm, opens the one
- * database, answers each tab's commands over its port, and fans every
+ * plays that part. It either loads the model layer compiled to wasm or forwards
+ * to the self-hosted server's database, answers commands over its port, and fans every
  * `model_writes` out to every port — so two tabs are coherent for the same
  * reason two desktop windows are, not because of a side channel.
  *
@@ -18,6 +18,7 @@
  */
 
 import { DB_LOCK_NAME, type FromWorker, type ToWorker } from "./protocol";
+import { createServerEngine, type DatabaseEngine, storageMode } from "./server-engine";
 
 /**
  * The wasm is imported lazily, inside `boot()`, rather than at the top of the
@@ -26,8 +27,7 @@ import { DB_LOCK_NAME, type FromWorker, type ToWorker } from "./protocol";
  * download and compile — and the tab can therefore tell "this worker is dead"
  * from "this worker is busy" with a short timeout.
  */
-type Engine = typeof import("@yaakapp-internal/wasm");
-let engine: Engine | null = null;
+let engine: DatabaseEngine | null = null;
 
 const ports = new Set<MessagePort>();
 
@@ -85,9 +85,9 @@ function acquireDatabaseLock(): Promise<void> {
 }
 
 /**
- * Open the database, once, for everyone.
+ * Select storage once for everyone, then open the local DB or connect to the server.
  *
- * Lock first, then load the model layer, then open — in that order, so a
+ * In browser-local mode, lock first, then load the model layer, then open, so a
  * worker that will never own the database also never downloads and compiles
  * the wasm for it.
  */
@@ -95,6 +95,10 @@ function bootOnce(): Promise<void> {
   if (booted != null) return booted;
 
   booted = (async () => {
+    if ((await storageMode()) === "server") {
+      engine = createServerEngine();
+      return;
+    }
     await acquireDatabaseLock();
     const loaded = await import("@yaakapp-internal/wasm");
     await loaded.boot();
@@ -127,7 +131,7 @@ async function handle(port: MessagePort, message: ToWorker): Promise<void> {
   try {
     switch (message.type) {
       case "rpc": {
-        const outcome = rpc(message.cmd, message.payload, message.label) as {
+        const outcome = (await rpc(message.cmd, message.payload, message.label)) as {
           result: unknown;
           events: unknown[];
         };
@@ -148,7 +152,7 @@ async function handle(port: MessagePort, message: ToWorker): Promise<void> {
         return;
       }
       case "blob_get": {
-        const bytes = blob_get(message.blobId);
+        const bytes = await blob_get(message.blobId);
         if (bytes == null) {
           send(port, { type: "result", id: message.id, result: null });
         } else {
@@ -161,12 +165,12 @@ async function handle(port: MessagePort, message: ToWorker): Promise<void> {
         return;
       }
       case "blob_put": {
-        blob_put(message.blobId, new Uint8Array(message.bytes));
+        await blob_put(message.blobId, new Uint8Array(message.bytes));
         send(port, { type: "result", id: message.id, result: null });
         return;
       }
       case "blob_delete": {
-        blob_delete(message.blobId);
+        await blob_delete(message.blobId);
         send(port, { type: "result", id: message.id, result: null });
         return;
       }

@@ -1,0 +1,41 @@
+name: Shared web storage
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  storage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: voidzero-dev/setup-vp@v1
+        with:
+          node-version: "24"
+          cache: true
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - run: sudo apt-get update && sudo apt-get install -y clang llvm
+      - run: npm ci --ignore-scripts
+      - name: Shared database and HTTP persistence tests
+        run: cargo test --locked -p yaak-browser -p yaak-web
+      - name: Check the IndexedDB adapter against the same commands
+        run: cargo check --locked -p yaak-wasm --target wasm32-unknown-unknown
+        env:
+          CC_wasm32_unknown_unknown: clang
+          AR_wasm32_unknown_unknown: llvm-ar
+      - name: Browser transport tests and type checking
+        run: |
+          vp test packages/platform/src/web/server-engine.test.ts
+          npx tsc --noEmit -p packages/platform/tsconfig.json
+      - name: Build the web client
+        run: vp -C apps/yaak-client build
+        env:
+          YAAK_TARGET: web
+          SKIP_WASM_BUILD: "1"

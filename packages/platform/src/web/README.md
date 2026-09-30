@@ -5,6 +5,15 @@ model layer — `yaak-models`, SQLite included — runs compiled to wasm inside 
 worker the tab talks to, so a browser stores exactly what a desktop install
 stores, migrations and all.
 
+For a self-hosted server started with `YAAK_WEB_DATA_DIR`, the worker instead
+uses `server-engine.ts` to forward the same database operations over HTTP.
+The server and WASM host share their command implementation in
+`crates/yaak-browser`. The worker discovers the mode from `/v1/health` before
+opening any local database; discovery failures stop startup rather than
+falling back to IndexedDB. See [shared server storage](../../../../crates-server/yaak-web/README.md#shared-server-storage)
+for deployment, persistence, and the one-active-browser constraint. Local
+storage mode now needs the server reachable for initial mode discovery.
+
 Select it at build time. `vp run web:dev` does that and starts the send server
 alongside the frontend:
 
@@ -31,17 +40,18 @@ tab (index.ts, commands.ts) ──MessagePort──▶ worker.ts ──▶ @yaak
                      ◀── NDJSON: events, response, body, cookies ──
 ```
 
-| File            | What it is                                                                                                                            |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `index.ts`      | The `Platform` implementation.                                                                                                        |
-| `commands.ts`   | The command table: model commands forward to the worker; the rest is fixed answers and refusals-with-a-reason.                        |
-| `connection.ts` | A tab's end of the wire: request/response over a `MessagePort`, event delivery, and the tab's identity (`label`).                     |
-| `send.ts`       | Sending: the worker renders (`prepare_http_send`), the server executes, this file stores what comes back where the desktop stores it. |
-| `server.ts`     | Where the Yaak server is, and the wire shapes it speaks (generated from `crates-server/yaak-web/src/wire.rs`).                        |
-| `worker.ts`     | The process that owns the database. Loads the wasm, opens the DB once, answers each port, fans `model_writes` out to every port.      |
-| `protocol.ts`   | The message shapes both sides import.                                                                                                 |
-| `errors.ts`     | `UnsupportedCommandError`, the structured refusal.                                                                                    |
-| `storage.ts`    | `navigator.storage.persist()`.                                                                                                        |
+| File               | What it is                                                                                                                            |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `index.ts`         | The `Platform` implementation.                                                                                                        |
+| `commands.ts`      | The command table: model commands forward to the worker; the rest is fixed answers and refusals-with-a-reason.                        |
+| `connection.ts`    | A tab's end of the wire: request/response over a `MessagePort`, event delivery, and the tab's identity (`label`).                     |
+| `send.ts`          | Sending: the worker renders (`prepare_http_send`), the server executes, this file stores what comes back where the desktop stores it. |
+| `server.ts`        | Where the Yaak server is, and the wire shapes it speaks (generated from `crates-server/yaak-web/src/wire.rs`).                        |
+| `server-engine.ts` | Storage-mode discovery and HTTP database transport for shared server storage.                                                         |
+| `worker.ts`        | The process that owns the database. Loads the wasm, opens the DB once, answers each port, fans `model_writes` out to every port.      |
+| `protocol.ts`      | The message shapes both sides import.                                                                                                 |
+| `errors.ts`        | `UnsupportedCommandError`, the structured refusal.                                                                                    |
+| `storage.ts`       | `navigator.storage.persist()`.                                                                                                        |
 
 The Rust side is `crates/yaak-wasm` (`@yaakapp-internal/wasm`): `boot()`,
 `rpc(cmd, payload, label)` returning `{ result, events }`, blob get/put, and

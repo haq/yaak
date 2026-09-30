@@ -11,9 +11,6 @@ export function blob_delete(id) {
 }
 
 /**
- * The bytes stored under an id, or none. Ids are the desktop's: a response's
- * own id for its body, `{responseId}.request` for the request that produced
- * it. Bytes cross to JS as a `Uint8Array` rather than through JSON.
  * @param {string} id
  * @returns {Uint8Array | undefined}
  */
@@ -33,9 +30,6 @@ export function blob_get(id) {
 }
 
 /**
- * Store bytes under an id, replacing anything already there. Chunked the way
- * the desktop chunks, so a body written here reads back on a desktop that
- * imports the database, and vice versa.
  * @param {string} id
  * @param {Uint8Array} bytes
  */
@@ -63,13 +57,6 @@ export function boot() {
 }
 
 /**
- * Resolve and render a request for sending, exactly as the desktop does before it puts the
- * request on the network: the environment chain, inherited headers and auth, request
- * settings, the cookie jar. Nothing here touches a socket. What comes back is what the tab
- * posts to the Yaak server.
- *
- * Refuses, with a message the user can act on, when the request needs something this host
- * doesn't have: an authentication plugin, or a template function.
  * @param {any} payload
  * @returns {Promise<any>}
  */
@@ -79,27 +66,6 @@ export function prepare_http_send(payload) {
 }
 
 /**
- * Run one command as `label` (the calling tab's identity, which stands in for
- * the desktop's window label on every write it makes).
- *
- * The payload shapes match the `Cmd*Req` types in `yaak-rpc-schema`, but are
- * declared locally and dispatched by name, which is the one place this host
- * does not share the desktop's guarantees: the desktop builds its router from
- * the schema, so every command has a handler by construction. Here a renamed
- * command would surface as a runtime "not a command this host answers".
- *
- * The fix is `yaak-commands` (the `Host` trait), not more machinery here —
- * its `models::*` handlers are already this file, typed. Three things have to
- * give before a wasm host can register them:
- *
- * 1. `Host: Send + Sync`, which a browser cannot satisfy: there is one thread
- *    and the connection pool is an `Rc`.
- * 2. `models_delete` reaches for `spawn_blocking`; there is nothing to spawn
- *    onto here.
- * 3. `yaak-commands` depends on `yaak` and `yaak-plugins`, which pull the HTTP
- *    stack and the Node sidecar and do not build for wasm32.
- *
- * None of those are hard; they are just not this PR.
  * @param {string} cmd
  * @param {any} payload
  * @param {string} label
@@ -333,10 +299,6 @@ export function __wbg_get_unchecked_1dfe6d05ad91d9b7(arg0, arg1) {
     const ret = arg0[arg1 >>> 0];
     return ret;
 }
-export function __wbg_get_with_ref_key_6412cf3094599694(arg0, arg1) {
-    const ret = arg0[arg1];
-    return ret;
-}
 export function __wbg_global_e30ac0b7684506d0(arg0) {
     const ret = arg0.global;
     return ret;
@@ -512,7 +474,7 @@ export function __wbg_new_typed_c072c4ce9a2a0cdf(arg0, arg1) {
             const a = state0.a;
             state0.a = 0;
             try {
-                return wasm_bindgen__convert__closures_____invoke__h7cced28f7815df81(a, state0.b, arg0, arg1);
+                return wasm_bindgen_24d5366d46d4eff1___convert__closures_____invoke___js_sys_a7f0d98932b99dea___Function_fn_wasm_bindgen_24d5366d46d4eff1___JsValue_____wasm_bindgen_24d5366d46d4eff1___sys__Undefined___js_sys_a7f0d98932b99dea___Function_fn_wasm_bindgen_24d5366d46d4eff1___JsValue_____wasm_bindgen_24d5366d46d4eff1___sys__Undefined_______true_(a, state0.b, arg0, arg1);
             } finally {
                 state0.a = a;
             }
@@ -693,27 +655,24 @@ export function __wbg_versions_215a3ab1c9d5745a(arg0) {
     const ret = arg0.versions;
     return ret;
 }
-export function __wbg_warn_b6f36cac66fc96a4(arg0, arg1) {
-    console.warn(arg0, arg1);
-}
 export function __wbindgen_cast_0000000000000001(arg0, arg1) {
-    // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 1131, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
-    const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__h2c4f0a20127a8a23);
+    // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 1175, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+    const ret = makeMutClosure(arg0, arg1, wasm_bindgen_24d5366d46d4eff1___convert__closures_____invoke___wasm_bindgen_24d5366d46d4eff1___JsValue__core_ed718c3d60ebd546___result__Result_____wasm_bindgen_24d5366d46d4eff1___JsError___true_);
     return ret;
 }
 export function __wbindgen_cast_0000000000000002(arg0, arg1) {
-    // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("Event")], shim_idx: 214, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
-    const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__h54297d6cc284a2e5);
+    // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("Event")], shim_idx: 109, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+    const ret = makeMutClosure(arg0, arg1, wasm_bindgen_24d5366d46d4eff1___convert__closures_____invoke___web_sys_fe28b290ee0b2984___features__gen_Event__Event______true_);
     return ret;
 }
 export function __wbindgen_cast_0000000000000003(arg0, arg1) {
-    // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("IDBVersionChangeEvent")], shim_idx: 177, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
-    const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__h804afe9d352bd562);
+    // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("IDBVersionChangeEvent")], shim_idx: 53, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+    const ret = makeMutClosure(arg0, arg1, wasm_bindgen_24d5366d46d4eff1___convert__closures_____invoke___web_sys_fe28b290ee0b2984___features__gen_IdbVersionChangeEvent__IdbVersionChangeEvent__core_ed718c3d60ebd546___result__Result_____wasm_bindgen_24d5366d46d4eff1___JsValue___true_);
     return ret;
 }
 export function __wbindgen_cast_0000000000000004(arg0, arg1) {
-    // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [], shim_idx: 216, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
-    const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__h5977a2970909c8b8);
+    // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [], shim_idx: 111, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+    const ret = makeMutClosure(arg0, arg1, wasm_bindgen_24d5366d46d4eff1___convert__closures_____invoke_______true_);
     return ret;
 }
 export function __wbindgen_cast_0000000000000005(arg0) {
@@ -750,30 +709,30 @@ export function __wbindgen_init_externref_table() {
     table.set(offset + 2, true);
     table.set(offset + 3, false);
 }
-function wasm_bindgen__convert__closures_____invoke__h5977a2970909c8b8(arg0, arg1) {
-    wasm.wasm_bindgen__convert__closures_____invoke__h5977a2970909c8b8(arg0, arg1);
+function wasm_bindgen_24d5366d46d4eff1___convert__closures_____invoke_______true_(arg0, arg1) {
+    wasm.wasm_bindgen_24d5366d46d4eff1___convert__closures_____invoke_______true_(arg0, arg1);
 }
 
-function wasm_bindgen__convert__closures_____invoke__h54297d6cc284a2e5(arg0, arg1, arg2) {
-    wasm.wasm_bindgen__convert__closures_____invoke__h54297d6cc284a2e5(arg0, arg1, arg2);
+function wasm_bindgen_24d5366d46d4eff1___convert__closures_____invoke___web_sys_fe28b290ee0b2984___features__gen_Event__Event______true_(arg0, arg1, arg2) {
+    wasm.wasm_bindgen_24d5366d46d4eff1___convert__closures_____invoke___web_sys_fe28b290ee0b2984___features__gen_Event__Event______true_(arg0, arg1, arg2);
 }
 
-function wasm_bindgen__convert__closures_____invoke__h2c4f0a20127a8a23(arg0, arg1, arg2) {
-    const ret = wasm.wasm_bindgen__convert__closures_____invoke__h2c4f0a20127a8a23(arg0, arg1, arg2);
+function wasm_bindgen_24d5366d46d4eff1___convert__closures_____invoke___wasm_bindgen_24d5366d46d4eff1___JsValue__core_ed718c3d60ebd546___result__Result_____wasm_bindgen_24d5366d46d4eff1___JsError___true_(arg0, arg1, arg2) {
+    const ret = wasm.wasm_bindgen_24d5366d46d4eff1___convert__closures_____invoke___wasm_bindgen_24d5366d46d4eff1___JsValue__core_ed718c3d60ebd546___result__Result_____wasm_bindgen_24d5366d46d4eff1___JsError___true_(arg0, arg1, arg2);
     if (ret[1]) {
         throw takeFromExternrefTable0(ret[0]);
     }
 }
 
-function wasm_bindgen__convert__closures_____invoke__h804afe9d352bd562(arg0, arg1, arg2) {
-    const ret = wasm.wasm_bindgen__convert__closures_____invoke__h804afe9d352bd562(arg0, arg1, arg2);
+function wasm_bindgen_24d5366d46d4eff1___convert__closures_____invoke___web_sys_fe28b290ee0b2984___features__gen_IdbVersionChangeEvent__IdbVersionChangeEvent__core_ed718c3d60ebd546___result__Result_____wasm_bindgen_24d5366d46d4eff1___JsValue___true_(arg0, arg1, arg2) {
+    const ret = wasm.wasm_bindgen_24d5366d46d4eff1___convert__closures_____invoke___web_sys_fe28b290ee0b2984___features__gen_IdbVersionChangeEvent__IdbVersionChangeEvent__core_ed718c3d60ebd546___result__Result_____wasm_bindgen_24d5366d46d4eff1___JsValue___true_(arg0, arg1, arg2);
     if (ret[1]) {
         throw takeFromExternrefTable0(ret[0]);
     }
 }
 
-function wasm_bindgen__convert__closures_____invoke__h7cced28f7815df81(arg0, arg1, arg2, arg3) {
-    wasm.wasm_bindgen__convert__closures_____invoke__h7cced28f7815df81(arg0, arg1, arg2, arg3);
+function wasm_bindgen_24d5366d46d4eff1___convert__closures_____invoke___js_sys_a7f0d98932b99dea___Function_fn_wasm_bindgen_24d5366d46d4eff1___JsValue_____wasm_bindgen_24d5366d46d4eff1___sys__Undefined___js_sys_a7f0d98932b99dea___Function_fn_wasm_bindgen_24d5366d46d4eff1___JsValue_____wasm_bindgen_24d5366d46d4eff1___sys__Undefined_______true_(arg0, arg1, arg2, arg3) {
+    wasm.wasm_bindgen_24d5366d46d4eff1___convert__closures_____invoke___js_sys_a7f0d98932b99dea___Function_fn_wasm_bindgen_24d5366d46d4eff1___JsValue_____wasm_bindgen_24d5366d46d4eff1___sys__Undefined___js_sys_a7f0d98932b99dea___Function_fn_wasm_bindgen_24d5366d46d4eff1___JsValue_____wasm_bindgen_24d5366d46d4eff1___sys__Undefined_______true_(arg0, arg1, arg2, arg3);
 }
 
 

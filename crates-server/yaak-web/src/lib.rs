@@ -4,7 +4,8 @@
 //! headers, redirects are followed silently, there is no timeline. So the tab
 //! renders the request and hands it here; this process puts it on the network
 //! with the desktop's own engine and streams back everything that happened,
-//! for the tab to store. It keeps nothing: no database, no files, no session.
+//! for the tab to store. With `--data-dir`, database commands and bodies are
+//! persisted on the server instead, using the same model layer as the WASM worker.
 //!
 //! Embed [`router`] in your own Axum server, or run the `yaak-web` binary
 //! configured by flags or `YAAK_WEB_*` environment variables.
@@ -15,6 +16,7 @@ mod config;
 mod guard;
 mod limits;
 mod send;
+mod storage;
 mod wire;
 
 use axum::Router;
@@ -60,6 +62,16 @@ struct AppState {
 /// Serve with `into_make_service_with_connect_info::<SocketAddr>()` so the send endpoint
 /// can extract the peer address for rate limiting.
 pub fn router(config: Config) -> Router {
+    try_router(config).expect("Failed to initialize Yaak web server")
+}
+
+/// Fallible router initialization, including opening and migrating optional shared storage.
+pub fn try_router(config: Config) -> Result<Router, String> {
+    let storage = config
+        .data_dir
+        .as_deref()
+        .map(|dir| storage::router(dir, config.max_request_bytes, config.max_response_bytes))
+        .transpose()?;
     let policy = DestinationPolicy::new(config.allow_private_networks);
     if config.allow_private_networks {
         warn!(
@@ -79,20 +91,27 @@ pub fn router(config: Config) -> Router {
     };
 
     let cors = CorsLayer::new()
-        .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
+        .allow_methods([Method::GET, Method::POST, Method::DELETE, Method::OPTIONS])
         .allow_headers([header::CONTENT_TYPE])
         .allow_origin(allowed_origins(&state.config.allowed_origins));
 
-    let api = Router::new()
-        .route("/v1/health", get(health))
+    let mut api = Router::new()
+        .route("/health", get(health))
         // A WebSocket or gRPC relay would sit beside this as `/v1/ws/relay` and `/v1/grpc/relay`
         // on the same router, behind the same policy, limits and auth. Not built; see README.
-        .route("/v1/http/send", post(send_http))
+        .route("/http/send", post(send_http))
         .layer(DefaultBodyLimit::max(state.config.max_request_bytes))
-        .layer(cors)
         .with_state(state.clone());
 
-    match &state.config.serve {
+    if let Some(storage) = storage {
+        api = api.merge(storage);
+    }
+    // Unknown API paths must not return the SPA HTML (especially on an older server).
+    api = api.fallback(|| async { error_response(StatusCode::NOT_FOUND, "Unknown API endpoint") });
+    // Nest the API fallback so it doesn't compete with the app's file-serving fallback.
+    let api = Router::new().nest("/v1", api).layer(cors);
+
+    Ok(match &state.config.serve {
         Some(dir) => {
             info!("Serving the web client from {}", dir.display());
             api.merge(web_router(dir))
@@ -104,7 +123,7 @@ pub fn router(config: Config) -> Router {
             let app_port = state.config.app_port;
             api.fallback(move |headers: HeaderMap| async move { no_app_here(app_port, headers) })
         }
-    }
+    })
 }
 
 /// The built web client, served on the same origin as the API.
@@ -195,6 +214,7 @@ async fn health(State(state): State<AppState>) -> impl IntoResponse {
         "version": env!("CARGO_PKG_VERSION"),
         "maxResponseBytes": state.config.max_response_bytes,
         "maxTimeoutSecs": state.config.max_timeout_secs,
+        "storage": if state.config.data_dir.is_some() { "server" } else { "browser" },
     }))
 }
 

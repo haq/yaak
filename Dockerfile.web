@@ -38,6 +38,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates libssl3 && rm -rf /var/lib/apt/lists/*
 COPY --from=server /app/target/release/yaak-web /usr/local/bin/yaak-web
 COPY --from=web /app/dist/apps/yaak-client /srv
+# A named volume inherits this ownership, so shared storage works as nobody.
+RUN mkdir -p /data && chown nobody:nogroup /data
 # 0.0.0.0 so the port is reachable from outside the container. PORT is the variable a
 # platform-as-a-service assigns, so a deploy that sets it needs nothing else changed.
 ENV HOST=0.0.0.0

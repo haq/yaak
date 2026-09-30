@@ -23,6 +23,7 @@ members = [
   "crates/yaak-tls",
   "crates/yaak-ws",
   "crates/yaak-wasm",
+  "crates/yaak-browser",
   "crates/yaak-api",
   "crates/yaak-proxy",
   # Proxy-specific crates
@@ -90,6 +91,7 @@ yaak-grpc = { path = "crates/yaak-grpc" }
 yaak-http = { path = "crates/yaak-http" }
 yaak-lifecycle = { path = "crates/yaak-lifecycle" }
 yaak-models = { path = "crates/yaak-models" }
+yaak-browser = { path = "crates/yaak-browser" }
 yaak-plugins = { path = "crates/yaak-plugins" }
 yaak-sse = { path = "crates/yaak-sse" }
 yaak-sync = { path = "crates/yaak-sync" }

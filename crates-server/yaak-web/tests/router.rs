@@ -13,6 +13,7 @@ fn config(serve: Option<PathBuf>) -> Config {
         port: 0,
         app_port: None,
         serve,
+        data_dir: None,
         allow_private_networks: false,
         allowed_origins: vec!["*".into()],
         max_request_bytes: 1024,

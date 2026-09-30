@@ -4,9 +4,7 @@ use std::path::PathBuf;
 
 /// The server behind Yaak running in a browser.
 ///
-/// The tab renders the request and owns the data; this binary puts the bytes on the network
-/// and streams back what came back, and with `--serve` hands the browser the app as well.
-/// Nothing is written to disk or a database.
+/// Executes sends and optionally serves the app and owns its shared SQLite data.
 #[derive(Parser, Debug, Clone)]
 #[command(name = "yaak-web", version, about, long_about = None)]
 pub struct Config {
@@ -35,6 +33,12 @@ pub struct Config {
     /// Without this the binary is only the send executor.
     #[arg(long, env = "YAAK_WEB_SERVE", value_name = "DIR")]
     pub serve: Option<PathBuf>,
+
+    /// Store shared models and response bodies here instead of in each browser.
+    /// All browsers use the same data; designed for one active browser at a time.
+    /// Omit to keep the existing browser-local storage mode.
+    #[arg(long, env = "YAAK_WEB_DATA_DIR", value_name = "DIR")]
+    pub data_dir: Option<PathBuf>,
 
     /// Allow sends to loopback, private and link-local addresses. Off by default, because a
     /// server reachable by strangers is an open relay into the network it sits on. Turn it on

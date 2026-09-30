@@ -1,0 +1,13 @@
+[package]
+name = "yaak-browser"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "Shared database commands for Yaak's browser and self-hosted server"
+
+[dependencies]
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+yaak-lifecycle = { workspace = true }
+yaak-models = { workspace = true }
+yaak-templates = { path = "../yaak-templates", default-features = false }

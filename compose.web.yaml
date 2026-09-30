@@ -1,0 +1,16 @@
+services:
+  yaak:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    image: yaak-web-shared:local
+    ports:
+      - "8080:8080"
+    environment:
+      YAAK_WEB_DATA_DIR: /data
+    volumes:
+      - yaak-data:/data
+    restart: unless-stopped
+
+volumes:
+  yaak-data:

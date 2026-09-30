@@ -10,9 +10,9 @@ process puts it on the network with the desktop's own engine (`yaak-http`) and
 streams back everything that happened — every header, every redirect hop, DNS
 timing, the body — for the tab to store.
 
-It is a **stateless executor**. It keeps nothing: no database, no files, no
-sessions, no cookies between calls. Every byte it sees comes from the tab in the
-request, and every byte it returns is stored by the tab. Restart it any time.
+By default it is a **stateless executor**: the tab owns the data. Optional
+shared storage (`--data-dir`) puts the app's SQLite databases on the server,
+so browsers opening the instance use the same data.
 
 ## Self-hosting it
 
@@ -28,9 +28,58 @@ tab's send URL is a path (`/v1/http/send`) rather than an address anyone has to
 configure. The image is `linux/amd64` and `linux/arm64`, built from
 `Dockerfile.web` at the repo root.
 
-Your data lives in your browser (SQLite compiled to wasm, in IndexedDB), not in
-the container. The container is stateless: nothing is written to disk, so
-upgrading is `docker pull` and nothing else.
+By default your data lives in your browser (SQLite compiled to wasm, in
+IndexedDB), and the container writes nothing to disk.
+
+### Shared server storage
+
+Build this checkout to use the shared storage option; the upstream published
+image does not contain this change. The included Compose file builds the app,
+enables server storage, and mounts a named volume:
+
+```shell
+docker compose -f compose.web.yaml up --build -d
+```
+
+Or build and run it directly:
+
+```shell
+docker build -f Dockerfile.web -t yaak-web-shared:local .
+docker run -p 8080:8080 \
+  -e YAAK_WEB_DATA_DIR=/data \
+  -v yaak-data:/data \
+  yaak-web-shared:local
+```
+
+Open <http://localhost:8080>. Workspaces, requests, environments, settings,
+cookie jars, history, and response bodies now live on the server. The browser
+detects the mode through `/v1/health`; there is no build-time storage setting.
+An acknowledged write has committed to SQLite. A server connection failure
+returns an error rather than switching to a separate local database.
+
+This mode is designed for **one active browser at a time and one server
+process**. Tabs in the same browser share the worker and its write events.
+Separate browsers do not receive live updates from each other; reload when
+switching browsers or after changing the server's storage mode.
+
+The directory contains `yaak.db` (models) and `yaak-blobs.db` (bodies), plus
+SQLite's journal files. The image runs as `nobody`; named volumes inherit the
+ownership of `/data`. A bind-mounted directory must be writable by that user.
+Restarting or rebuilding the container preserves the named volume; do not use
+`docker compose down -v` unless you intend to delete the data. For a consistent
+backup, stop the container and copy the entire data directory. Yaak's existing
+migrations run automatically at startup; take a backup before an upgrade.
+
+Existing IndexedDB data stays in its original browser and is **not migrated
+automatically**. Export any existing workspaces before switching modes. The web
+host's existing import limitations still apply; shared storage does not add
+desktop-only features such as plugins, Git sync, or workspace encryption.
+
+The instance has no built-in authentication or per-user isolation. Anyone who
+can access its storage API can read and modify the shared data, including
+environment values and cookies. Use it on a trusted network or behind an
+authenticated reverse proxy. `YAAK_WEB_ALLOWED_ORIGINS` can restrict browser
+origins, but is not authentication.
 
 Two settings are worth knowing about:
 
@@ -92,12 +141,13 @@ platform-as-a-service that assigns a port. Everything else is `YAAK_WEB_*`.
 | Flag                       | Default     | What                                                                                          |
 | -------------------------- | ----------- | --------------------------------------------------------------------------------------------- |
 | `--serve`                  | off         | Also serve a built web client from this directory, on the same origin.                        |
+| `--data-dir`               | off         | Shared SQLite data directory (`YAAK_WEB_DATA_DIR`); otherwise data stays in each browser.     |
 | `--host`                   | `127.0.0.1` | Interface to listen on. The image sets `0.0.0.0`. May be a name; `localhost` resolves.        |
 | `--port`                   | `9227`      | Port to listen on. The image sets `8080`.                                                     |
 | `--allow-private-networks` | off         | Allow sends to loopback, private and link-local addresses.                                    |
 | `--allowed-origins`        | `*`         | CORS origins, comma-separated. Unused when the app is served from here: same origin, no CORS. |
-| `--max-request-bytes`      | 16 MiB      | Largest rendered request accepted from the tab.                                               |
-| `--max-response-bytes`     | 64 MiB      | Largest upstream body relayed before the send is cut off.                                     |
+| `--max-request-bytes`      | 16 MiB      | Largest rendered request or storage command JSON accepted from the tab.                       |
+| `--max-response-bytes`     | 64 MiB      | Largest upstream body relayed, and largest shared-storage blob upload.                        |
 | `--max-timeout-secs`       | 60          | Ceiling on a send's timeout; a request asking for more (or none) gets this.                   |
 | `--rate-limit-per-minute`  | 120         | Sends per client IP per minute; 0 disables.                                                   |
 | `--max-concurrent`         | 256         | Sends in flight at once.                                                                      |
@@ -224,7 +274,41 @@ into `bindings/` (run `cargo test -p yaak-web` after changing a frame)
 and published to the tab as `@yaakapp-internal/web`, so a change to the
 wire on one side is a type error on the other.
 
-`GET /v1/health` reports the version and the effective limits.
+`GET /v1/health` reports the version, effective limits, and `storage`:
+`"browser"` by default, `"server"` with `--data-dir`.
+
+## Shared database API
+
+Available only with `--data-dir`. Database rules, migrations and rendering are
+shared with the IndexedDB host through `crates/yaak-browser`; this HTTP layer
+only transports the existing browser operations.
+
+| Endpoint                       | Request                                                               | Response                                                  |
+| ------------------------------ | --------------------------------------------------------------------- | --------------------------------------------------------- |
+| `POST /v1/storage/rpc`         | `{ "cmd": "models_upsert", "payload": { … }, "label": "tab_…" }`      | `{ "result": …, "events": […] }`                          |
+| `POST /v1/storage/prepare`     | `{ "requestId": "rq_…", "environmentId": null, "cookieJarId": null }` | Rendered request, settings, setting events and cookie jar |
+| `GET /v1/storage/blobs/:id`    | —                                                                     | Binary bytes, or `404` when absent                        |
+| `POST /v1/storage/blobs/:id`   | Binary bytes (`application/octet-stream`)                             | `204` after commit                                        |
+| `DELETE /v1/storage/blobs/:id` | —                                                                     | `204` after commit                                        |
+
+Storage responses are `no-store`. Commands are serialized off the async runtime
+threads; each RPC returns its own model-write events with the original calling
+tab label. The browser worker distributes those events using its existing
+protocol. HTTP sends still use `/v1/http/send`, and the browser stores their
+streamed results through the selected database transport.
+
+For updates to the shared command implementation, regenerate the committed
+WASM package with `node crates/yaak-wasm/build-wasm.cjs` (requires `wasm-pack`
+and LLVM), then build the web client. The `Shared web storage` CI workflow
+checks persistence, the WASM adapter, browser transport and web build on upstream
+merges. Check both transports locally with:
+
+```shell
+cargo test -p yaak-web -p yaak-browser
+CC_wasm32_unknown_unknown=/path/to/clang cargo check -p yaak-wasm --target wasm32-unknown-unknown
+npx vp test packages/platform/src/web/server-engine.test.ts
+YAAK_TARGET=web SKIP_WASM_BUILD=1 npx vp -C apps/yaak-client build
+```
 
 ## What comes later
 
