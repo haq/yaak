@@ -313,6 +313,8 @@ export interface PlatformCapabilities {
   systemFonts: boolean;
   /** Commercial licence activation. */
   license: boolean;
+  /** Connecting local AI agents through the Yaak CLI on this machine. */
+  agents: boolean;
 }
 
 export type CapabilityName = keyof PlatformCapabilities;

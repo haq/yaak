@@ -2,6 +2,10 @@
 
 Exposes Yaak's functionality via the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/).
 
+**Deprecated.** The Yaak CLI serves the same tools with `yaak mcp`, with the app open or
+closed. Install the CLI (`npm install -g @yaakapp/cli`), point your agent at `yaak mcp`, then
+uninstall this plugin. Settings > Agents in Yaak has the command for each agent.
+
 ## Setup
 
 Add this to your Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
@@ -10,14 +14,14 @@ Add this to your Claude Desktop config (`~/Library/Application Support/Claude/cl
 {
   "mcpServers": {
     "yaak": {
-      "command": "npx",
-      "args": ["-y", "mcp-remote", "http://127.0.0.1:64343/mcp"]
+      "command": "yaak",
+      "args": ["mcp"]
     }
   }
 }
 ```
 
-Restart Claude Desktop and make sure Yaak is running.
+Restart Claude Desktop.
 
 ## Available Tools
 

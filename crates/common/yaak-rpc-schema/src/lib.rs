@@ -97,6 +97,35 @@ pub struct CmdSyncWatchReq {
 #[ts(export, export_to = "gen_rpc.ts")]
 pub struct CmdMetadataReq {}
 
+/// A coding agent the Agents settings pane can set up.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+#[ts(export, export_to = "gen_rpc.ts")]
+pub enum AgentClient {
+    ClaudeCode,
+    Codex,
+    Cursor,
+    Vscode,
+    Other,
+}
+
+#[derive(Debug, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "gen_rpc.ts")]
+pub struct CmdAgentSetupStatusReq {
+    pub agent: AgentClient,
+}
+
+/// Which setup steps an agent already has done on this machine. `None` means
+/// the pane cannot tell for that agent.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "gen_rpc.ts")]
+pub struct AgentSetupStatus {
+    pub mcp_server: Option<bool>,
+    pub skill: Option<bool>,
+}
+
 #[derive(Debug, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export, export_to = "gen_rpc.ts")]
@@ -834,6 +863,8 @@ pub struct CmdSyncApplyReq {
     pub sync_ops: Vec<SyncOp>,
     pub sync_dir: PathBuf,
     pub workspace_id: String,
+    #[serde(default)]
+    pub fs_only: bool,
 }
 
 #[derive(Debug, Deserialize, TS)]
@@ -926,6 +957,7 @@ macro_rules! with_commands {
     ($callback:ident) => {
         $callback! {
     cmd_metadata(CmdMetadataReq) -> AppMetaData,
+    cmd_agent_setup_status(CmdAgentSetupStatusReq) -> AgentSetupStatus,
     cmd_template_tokens_to_string(CmdTemplateTokensToStringReq) -> String,
     cmd_render_template(CmdRenderTemplateReq) -> String,
     cmd_send_feedback(CmdSendFeedbackReq) -> (),
@@ -1024,7 +1056,7 @@ macro_rules! with_commands {
     cmd_git_rm_remote(CmdGitRmRemoteReq) -> (),
     cmd_sync_calculate(CmdSyncCalculateReq) -> Vec<SyncOp>,
     cmd_sync_calculate_fs(CmdSyncCalculateFsReq) -> Vec<SyncOp>,
-    cmd_sync_apply(CmdSyncApplyReq) -> (),
+    cmd_sync_apply(CmdSyncApplyReq) -> bool,
     cmd_ws_delete_connections(CmdWsDeleteConnectionsReq) -> (),
     cmd_ws_send(CmdWsSendReq) -> WebsocketConnection,
     cmd_ws_close(CmdWsCloseReq) -> WebsocketConnection,

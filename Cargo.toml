@@ -11,10 +11,12 @@ members = [
   "crates/yaak-core",
   "crates/yaak-common",
   "crates/yaak-crypto",
+  "crates/yaak-filter",
   "crates/yaak-git",
   "crates/yaak-grpc",
   "crates/yaak-http",
   "crates/yaak-lifecycle",
+  "crates/yaak-mcp",
   "crates/yaak-models",
   "crates/yaak-plugins",
   "crates/yaak-sse",
@@ -39,6 +41,7 @@ members = [
   "crates-tauri/yaak-fonts",
   "crates-tauri/yaak-license",
   "crates-tauri/yaak-mac-window",
+  "crates-tauri/yaak-proxy-helper",
   "crates-tauri/yaak-system-appearance",
   "crates-tauri/yaak-tauri-utils",
   "crates-tauri/yaak-window",
@@ -86,10 +89,12 @@ yaak = { path = "crates/yaak" }
 yaak-commands = { path = "crates/yaak-commands" }
 yaak-common = { path = "crates/yaak-common" }
 yaak-crypto = { path = "crates/yaak-crypto" }
+yaak-filter = { path = "crates/yaak-filter" }
 yaak-git = { path = "crates/yaak-git" }
 yaak-grpc = { path = "crates/yaak-grpc" }
 yaak-http = { path = "crates/yaak-http" }
 yaak-lifecycle = { path = "crates/yaak-lifecycle" }
+yaak-mcp = { path = "crates/yaak-mcp" }
 yaak-models = { path = "crates/yaak-models" }
 yaak-browser = { path = "crates/yaak-browser" }
 yaak-plugins = { path = "crates/yaak-plugins" }
@@ -108,6 +113,7 @@ yaak-proxy-lib = { path = "crates-proxy/yaak-proxy-lib" }
 yaak-fonts = { path = "crates-tauri/yaak-fonts" }
 yaak-license = { path = "crates-tauri/yaak-license" }
 yaak-mac-window = { path = "crates-tauri/yaak-mac-window" }
+yaak-proxy-helper = { path = "crates-tauri/yaak-proxy-helper" }
 yaak-system-appearance = { path = "crates-tauri/yaak-system-appearance" }
 yaak-tauri-utils = { path = "crates-tauri/yaak-tauri-utils" }
 yaak-window = { path = "crates-tauri/yaak-window" }
