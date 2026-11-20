@@ -1,7 +1,7 @@
 use crate::cli::McpArgs;
 use crate::context::{CliContext, CliExecutionContext};
 use crate::plugin_events::SendContexts;
-use rand::Rng;
+use rand::RngExt;
 use std::net::{Ipv4Addr, SocketAddr};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -76,7 +76,7 @@ async fn serve_http(host: CliMcpHost, port: u16, token: Option<String>) -> Resul
 }
 
 fn generate_token() -> String {
-    hex::encode(rand::thread_rng().r#gen::<[u8; 32]>())
+    hex::encode(rand::rng().random::<[u8; 32]>())
 }
 
 /// Every workspace in the database is "open", and the global `--environment`
@@ -646,7 +646,43 @@ mod tests {
             fx.ok("delete_http_request", json!({ "id": id })).await,
             format!("Deleted: Created ({id})")
         );
-        assert_eq!(fx.json("get_http_request", json!({ "id": id })).await, Value::Null);
+        assert_eq!(
+            fx.err("get_http_request", json!({ "id": id })).await,
+            format!("HTTP request with ID {id} not found")
+        );
+        fx.finish().await;
+    }
+
+    /// QA sweep bug 6: `get_http_request` with a `wr_` ID or `rq_bogus` answered `"null"`
+    /// with `isError: false`, and `delete_http_request` on a `wr_` ID failed obscurely.
+    #[tokio::test]
+    async fn http_request_tools_reject_unknown_and_non_http_ids() {
+        let fx = Fixture::new(None).await;
+        let websocket = fx
+            .query_manager
+            .with_tx(|db| {
+                db.upsert_websocket_request(
+                    &yaak_models::models::WebsocketRequest {
+                        workspace_id: fx.workspace_id.clone(),
+                        name: "Socket".into(),
+                        ..Default::default()
+                    },
+                    &UpdateSource::Background,
+                )
+            })
+            .unwrap();
+
+        assert_eq!(
+            fx.err("get_http_request", json!({ "id": "rq_bogus" })).await,
+            "HTTP request with ID rq_bogus not found"
+        );
+        let expected = format!(
+            "{} is a WebSocket request, and these tools only work with HTTP requests. Use the Yaak app or the `yaak request` CLI commands for it.",
+            websocket.id
+        );
+        assert_eq!(fx.err("get_http_request", json!({ "id": websocket.id })).await, expected);
+        assert_eq!(fx.err("delete_http_request", json!({ "id": websocket.id })).await, expected);
+        assert!(fx.query_manager.connect().get_websocket_request(&websocket.id).is_ok());
         fx.finish().await;
     }
 
